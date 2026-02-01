@@ -1,7 +1,7 @@
 # fly.toml - Fly.io deployment configuration
 # App name will be set by Fly.io when you connect your repo
 
-app = "app-lingering-cloud-3109"
+app = "deliberate-api"
 primary_region = "iad"
 
 [build]
