@@ -1,4 +1,7 @@
-"""Deliberate API - Multi-agent deliberation service."""
+"""Deliberate API - Multi-agent deliberation service.
+
+A service that stress-tests ideas through structured AI debate.
+"""
 
 import os
 import asyncio
