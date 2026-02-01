@@ -90,35 +90,47 @@ def build_r3_prompt(
 All R2 outputs (after cross-reading):
 {outputs_section}
 
-Synthesize the deliberation into a final verdict.
+Synthesize the deliberation into a comprehensive final verdict.
+
+IMPORTANT: Provide DETAILED, SUBSTANTIVE responses. Do not summarize or abbreviate.
 
 Your response MUST end with a structured JSON block in exactly this format:
 
 ```json
 {{
-  "verdict": "Your clear, actionable verdict on the thesis (1-2 sentences)",
+  "verdict": "Your clear, actionable verdict on the thesis. Be specific and detailed - at least 3-4 sentences explaining the bottom-line conclusion and its key qualifications.",
   "confidence": "high" | "medium" | "low",
-  "reasoning": "The key reasoning behind your verdict (2-3 sentences)",
+  "reasoning": "Comprehensive reasoning behind your verdict. This should be a substantial paragraph (150-250 words) that synthesizes the key arguments, explains why certain factors were weighted more heavily, addresses the strongest counterarguments, and justifies the confidence level. Do NOT say 'see above' or 'as discussed' - provide the full reasoning here.",
   "key_agreements": [
-    "First point all agents agreed on",
-    "Second point of consensus",
-    "..."
+    "First substantive point all agents agreed on - be specific about what exactly they agreed on and why it matters",
+    "Second point of consensus with specific details",
+    "Third point of agreement",
+    "Fourth point if applicable",
+    "Fifth point if applicable",
+    "Include at least 4-6 meaningful agreements"
   ],
   "divergences": [
     {{
-      "topic": "Topic of disagreement",
-      "description": "What the disagreement is about",
+      "topic": "Specific topic of disagreement",
+      "description": "Detailed description of what the disagreement is about, why it matters, and what's at stake (2-3 sentences minimum)",
       "positions": [
-        {{"view": "First agent's view", "confidence": "high|medium|low"}},
-        {{"view": "Second agent's view", "confidence": "high|medium|low"}},
-        {{"view": "Third agent's view", "confidence": "high|medium|low"}}
+        {{"view": "First agent's detailed position - include their reasoning and key evidence (2-3 sentences)", "confidence": "high|medium|low"}},
+        {{"view": "Second agent's detailed position with reasoning (2-3 sentences)", "confidence": "high|medium|low"}},
+        {{"view": "Third agent's detailed position with reasoning (2-3 sentences)", "confidence": "high|medium|low"}}
       ]
+    }},
+    {{
+      "topic": "Second area of divergence",
+      "description": "Detailed description",
+      "positions": [...]
     }}
   ]
 }}
 ```
 
-First, write your synthesis narrative, then end with the JSON block.
+Include at least 3-5 divergences if they exist. Be thorough and substantive throughout.
+
+First, write your synthesis narrative (at least 500 words), then end with the JSON block.
 {MARKDOWN_INSTRUCTION}"""
 
 
