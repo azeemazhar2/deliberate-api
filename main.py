@@ -1,4 +1,7 @@
-"""Deliberate API - Multi-agent deliberation service."""
+"""Deliberate API - Multi-agent deliberation service.
+
+A service that stress-tests ideas through structured AI debate.
+"""
 
 import os
 import asyncio
@@ -56,7 +59,11 @@ app = FastAPI(
 @app.get("/health")
 async def health_check():
     """Health check endpoint for load balancers."""
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "api_keys_configured": len(VALID_API_KEYS) > 0 and "" not in VALID_API_KEYS,
+        "openrouter_configured": bool(os.getenv("OPENROUTER_API_KEY")),
+    }
 
 
 @app.post("/v1/deliberate", response_model=JobCreatedResponse)
