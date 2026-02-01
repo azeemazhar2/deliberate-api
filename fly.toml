@@ -1,0 +1,23 @@
+# fly.toml - Fly.io deployment configuration
+# App name will be set by Fly.io when you connect your repo
+
+app = "app-lingering-cloud-3109"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[checks]
+  [checks.health]
+    port = 8000
+    type = "http"
+    interval = "30s"
+    timeout = "5s"
+    path = "/health"
