@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deliberate</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #111; color: #eee; }
+    h1 { font-size: 1.5rem; margin-bottom: 20px; }
+    input, textarea { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #333; border-radius: 8px; background: #222; color: #eee; }
+    textarea { height: 100px; resize: vertical; }
+    button { width: 100%; padding: 14px; font-size: 16px; background: #2563eb; color: white; border: none; border-radius: 8px; margin-top: 12px; cursor: pointer; }
+    button:disabled { background: #444; cursor: wait; }
+    #login { display: block; }
+    #app { display: none; }
+    #status { margin-top: 16px; padding: 12px; background: #222; border-radius: 8px; display: none; }
+    #result { margin-top: 16px; padding: 16px; background: #1a1a1a; border-radius: 8px; display: none; white-space: pre-wrap; line-height: 1.6; }
+    .verdict { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: #4ade80; }
+    .section { margin-top: 16px; }
+    .section-title { font-weight: 600; color: #60a5fa; margin-bottom: 8px; }
+    .agreement { margin: 4px 0; padding-left: 12px; border-left: 2px solid #4ade80; }
+    .divergence { margin: 12px 0; padding: 12px; background: #252525; border-radius: 6px; }
+    .divergence-title { font-weight: 600; color: #fbbf24; }
+    .position { margin: 6px 0 6px 12px; font-size: 0.9rem; }
+    .error { color: #f87171; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div id="login">
+    <h1>Deliberate</h1>
+    <input type="password" id="password" placeholder="Enter password" onkeypress="if(event.key==='Enter')login()">
+    <button onclick="login()">Login</button>
+    <div id="login-error" class="error"></div>
+  </div>
+
+  <div id="app">
+    <h1>Deliberate</h1>
+    <textarea id="thesis" placeholder="Enter your thesis... e.g. 'We should rewrite the backend in Rust'"></textarea>
+    <button id="submit" onclick="submit()">Deliberate</button>
+    <div id="status"></div>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const PASSWORD = 'deliberate123';
+    const API_KEY = 'xyz-123-154';
+
+    // Check if already logged in
+    if (localStorage.getItem('deliberate_auth') === PASSWORD) {
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+    }
+
+    function login() {
+      const pwd = document.getElementById('password').value;
+      if (pwd === PASSWORD) {
+        localStorage.setItem('deliberate_auth', pwd);
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+      } else {
+        document.getElementById('login-error').textContent = 'Wrong password';
+      }
+    }
+
+    async function submit() {
+      const thesis = document.getElementById('thesis').value.trim();
+      if (!thesis) return;
+
+      const btn = document.getElementById('submit');
+      const status = document.getElementById('status');
+      const result = document.getElementById('result');
+
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+      status.style.display = 'block';
+      result.style.display = 'none';
+
+      try {
+        // Submit job
+        const resp = await fetch('/v1/deliberate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+          body: JSON.stringify({ thesis })
+        });
+        const job = await resp.json();
+        if (!resp.ok) throw new Error(job.detail || 'Failed to submit');
+
+        // Poll for result
+        const jobId = job.job_id;
+        status.textContent = 'Processing... Round 1';
+
+        while (true) {
+          await new Promise(r => setTimeout(r, 3000));
+          const pollResp = await fetch(`/v1/jobs/${jobId}`, {
+            headers: { 'X-API-Key': API_KEY }
+          });
+          const pollData = await pollResp.json();
+
+          if (pollData.current_round) {
+            status.textContent = `Processing... Round ${pollData.current_round}`;
+          }
+
+          if (pollData.status === 'completed') {
+            showResult(pollData.result);
+            break;
+          } else if (pollData.status === 'failed') {
+            throw new Error(pollData.error || 'Deliberation failed');
+          }
+        }
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+        status.style.color = '#f87171';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Deliberate';
+      }
+    }
+
+    function showResult(r) {
+      const status = document.getElementById('status');
+      const result = document.getElementById('result');
+
+      status.style.display = 'none';
+      result.style.display = 'block';
+
+      let html = `<div class="verdict">${r.verdict}</div>`;
+      html += `<div><strong>Confidence:</strong> ${r.confidence}</div>`;
+      html += `<div class="section"><div class="section-title">Reasoning</div>${r.reasoning}</div>`;
+
+      html += `<div class="section"><div class="section-title">Key Agreements</div>`;
+      r.key_agreements.forEach(a => {
+        html += `<div class="agreement">${a}</div>`;
+      });
+      html += `</div>`;
+
+      html += `<div class="section"><div class="section-title">Divergences</div>`;
+      r.divergences.forEach(d => {
+        html += `<div class="divergence"><div class="divergence-title">${d.topic}</div><div>${d.description}</div>`;
+        d.positions.forEach(p => {
+          html += `<div class="position">• ${p.view} <em>(${p.confidence})</em></div>`;
+        });
+        html += `</div>`;
+      });
+      html += `</div>`;
+
+      html += `<div style="margin-top:16px;font-size:0.85rem;color:#888;">Tokens: ${r.tokens_used} | Rounds: ${r.rounds_completed}</div>`;
+
+      result.innerHTML = html;
+    }
+  </script>
+</body>
+</html>

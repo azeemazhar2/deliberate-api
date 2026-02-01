@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir \
 
 # Copy application
 COPY *.py .
+COPY static/ static/
 
 # Expose port
 EXPOSE 8000
