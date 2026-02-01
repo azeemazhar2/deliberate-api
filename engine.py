@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 
 # Default models for diverse perspectives
 DEFAULT_MODELS = [
-    "anthropic/claude-sonnet-4-20250514",
-    "openai/gpt-4o",
-    "google/gemini-2.0-flash-001",
+    "anthropic/claude-haiku-4.5",
+    "liquid/lfm-2.5-1.2b-thinking:free",
+    "google/gemini-3-flash-preview",
 ]
 
 
