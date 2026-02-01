@@ -161,18 +161,46 @@ class DeliberationEngine:
 
     def _parse_synthesis(self, content: str) -> DeliberationResult:
         """Extract structured result from R3 synthesis."""
-        # Try to find JSON block
-        json_match = re.search(r"```json\s*(\{.*?\})\s*```", content, re.DOTALL)
+        # Try to find JSON block - handle nested braces properly
+        json_match = re.search(r"```json\s*(\{[\s\S]*\})\s*```", content)
 
         if json_match:
+            json_str = json_match.group(1)
+            # Find the balanced closing brace
+            json_str = self._extract_balanced_json(json_str)
             try:
-                data = json.loads(json_match.group(1))
+                data = json.loads(json_str)
                 return self._build_result_from_json(data)
             except json.JSONDecodeError as e:
                 logger.warning(f"Failed to parse synthesis JSON: {e}")
+                logger.debug(f"JSON string was: {json_str[:500]}...")
+
+        # Try finding raw JSON without markdown
+        raw_match = re.search(r'\{\s*"verdict"[\s\S]*\}', content)
+        if raw_match:
+            try:
+                json_str = self._extract_balanced_json(raw_match.group(0))
+                data = json.loads(json_str)
+                return self._build_result_from_json(data)
+            except json.JSONDecodeError:
+                pass
 
         # Fallback: extract what we can from the text
+        logger.warning("Could not parse JSON, using fallback extraction")
         return self._build_fallback_result(content)
+
+    def _extract_balanced_json(self, s: str) -> str:
+        """Extract balanced JSON object from string."""
+        depth = 0
+        start = s.index('{')
+        for i, c in enumerate(s[start:], start):
+            if c == '{':
+                depth += 1
+            elif c == '}':
+                depth -= 1
+                if depth == 0:
+                    return s[start:i+1]
+        return s  # Return as-is if unbalanced
 
     def _build_result_from_json(self, data: dict) -> DeliberationResult:
         """Build result from parsed JSON."""
