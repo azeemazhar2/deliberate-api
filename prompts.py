@@ -9,35 +9,47 @@ MARKDOWN_INSTRUCTION = """
 - Use **bold** for key points
 - Use bullet points for clarity"""
 
+# Role-based agent definitions
+AGENT_ROLES = [
+    ("Optimist", "Focus on why this could succeed, work, or be true. Steel-man the strongest case."),
+    ("Constructive Skeptic", "Focus on failure modes, risks, and reasons for doubt. Things that would need to be true for this to work. Do not engage in stakeholder theatre"),
+    ("Analyst", "Focus on evidence, data, and empirical patterns. Be quantitative where possible. Ignore stakeholder theatre")
+]
 
-def build_r1_prompt(thesis: str, context: str | None = None) -> str:
-    """Build R1 (Independent Analysis) prompt."""
+# Agent labels for anonymization in R2/R3
+AGENT_LABELS = ["Agent Alpha", "Agent Beta", "Agent Gamma"]
+
+
+def build_r1_prompt(thesis: str, role_index: int, context: str | None = None) -> str:
+    """Build R1 (Independent Analysis) prompt with role-based perspective."""
+    role_name, role_description = AGENT_ROLES[role_index]
     todays_date = date.today().strftime("%B %d, %Y")
 
     context_section = ""
     if context:
         context_section = f"""
----
-**CONTEXT**
+
+**Additional Context:**
 {context}
----
 """
 
-    return f"""You are analyzing the following thesis:
+    return f"""You are Agent {role_name}: {role_description}
+
+Today's date: {todays_date}
+
+Analyze this query from your perspective:
 ---
 {thesis}
 ---
 {context_section}
-Today's date: {todays_date}
+Provide your analysis covering:
+- Your assessment/answer
+- Your highest-conviction supporting points (2-4)
+- Your highest-conviction concerns or counterpoints (2-4)
+- Critical assumptions in your reasoning
+- What evidence would change your view
 
-Provide your independent analysis. Consider:
-- Strengths and weaknesses of the argument
-- Missing considerations
-- Potential risks and opportunities
-- Evidence that would strengthen or weaken the thesis
-- Key assumptions and dependencies
-
-Be thorough but concise. Focus on your highest-conviction insights.
+Be direct and specific. Prioritize insight over comprehensiveness.
 {MARKDOWN_INSTRUCTION}"""
 
 
@@ -132,7 +144,3 @@ Include at least 3-5 divergences if they exist. Be thorough and substantive thro
 
 First, write your synthesis narrative (at least 500 words), then end with the JSON block.
 {MARKDOWN_INSTRUCTION}"""
-
-
-# Agent labels for anonymization
-AGENT_LABELS = ["Agent Alpha", "Agent Beta", "Agent Gamma"]

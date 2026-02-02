@@ -101,11 +101,13 @@ class DeliberationEngine:
             )
 
     async def _run_r1(self, job: Job) -> list[AgentOutput]:
-        """Run R1: Independent Analysis in parallel."""
-        prompt = build_r1_prompt(job.thesis, job.context)
-
+        """Run R1: Independent Analysis in parallel with role-based perspectives."""
         tasks = [
-            self._call_agent(model, prompt, f"agent_{i}")
+            self._call_agent(
+                model,
+                build_r1_prompt(job.thesis, role_index=i, context=job.context),
+                f"agent_{i}"
+            )
             for i, model in enumerate(job.models)
         ]
 
