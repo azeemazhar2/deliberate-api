@@ -158,7 +158,7 @@ class DeliberationEngine:
         parsed = self._parse_synthesis(content)
         parsed.tokens_used = tokens_used
 
-        logger.info(f"R3 complete: verdict={parsed.verdict[:50]}...")
+        logger.info(f"R3 complete: answer={parsed.answer[:50]}...")
         return parsed
 
     def _parse_synthesis(self, content: str) -> DeliberationResult:
@@ -178,7 +178,7 @@ class DeliberationEngine:
                 logger.debug(f"JSON string was: {json_str[:500]}...")
 
         # Try finding raw JSON without markdown
-        raw_match = re.search(r'\{\s*"verdict"[\s\S]*\}', content)
+        raw_match = re.search(r'\{\s*"answer"[\s\S]*\}', content)
         if raw_match:
             try:
                 json_str = self._extract_balanced_json(raw_match.group(0))
