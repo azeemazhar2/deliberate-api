@@ -8,7 +8,7 @@ from typing import Callable, Awaitable
 
 from models import (
     Job, JobStatus, DeliberationResult, AgentOutput, RoundOutput,
-    Divergence, Position, Confidence,
+    Confidence,
 )
 from openrouter import get_client, OpenRouterError
 from prompts import build_r1_prompt, build_r2_prompt, build_r3_prompt, AGENT_LABELS
@@ -101,11 +101,13 @@ class DeliberationEngine:
             )
 
     async def _run_r1(self, job: Job) -> list[AgentOutput]:
-        """Run R1: Independent Analysis in parallel."""
-        prompt = build_r1_prompt(job.thesis, job.context)
-
+        """Run R1: Independent Analysis in parallel with role-based perspectives."""
         tasks = [
-            self._call_agent(model, prompt, f"agent_{i}")
+            self._call_agent(
+                model,
+                build_r1_prompt(job.thesis, role_index=i, context=job.context),
+                f"agent_{i}"
+            )
             for i, model in enumerate(job.models)
         ]
 
@@ -161,55 +163,69 @@ class DeliberationEngine:
 
     def _parse_synthesis(self, content: str) -> DeliberationResult:
         """Extract structured result from R3 synthesis."""
-        # Try to find JSON block
-        json_match = re.search(r"```json\s*(\{.*?\})\s*```", content, re.DOTALL)
+        # Try to find JSON block - handle nested braces properly
+        json_match = re.search(r"```json\s*(\{[\s\S]*\})\s*```", content)
 
         if json_match:
+            json_str = json_match.group(1)
+            # Find the balanced closing brace
+            json_str = self._extract_balanced_json(json_str)
             try:
-                data = json.loads(json_match.group(1))
+                data = json.loads(json_str)
                 return self._build_result_from_json(data)
             except json.JSONDecodeError as e:
                 logger.warning(f"Failed to parse synthesis JSON: {e}")
+                logger.debug(f"JSON string was: {json_str[:500]}...")
+
+        # Try finding raw JSON without markdown
+        raw_match = re.search(r'\{\s*"verdict"[\s\S]*\}', content)
+        if raw_match:
+            try:
+                json_str = self._extract_balanced_json(raw_match.group(0))
+                data = json.loads(json_str)
+                return self._build_result_from_json(data)
+            except json.JSONDecodeError:
+                pass
 
         # Fallback: extract what we can from the text
+        logger.warning("Could not parse JSON, using fallback extraction")
         return self._build_fallback_result(content)
+
+    def _extract_balanced_json(self, s: str) -> str:
+        """Extract balanced JSON object from string."""
+        depth = 0
+        start = s.index('{')
+        for i, c in enumerate(s[start:], start):
+            if c == '{':
+                depth += 1
+            elif c == '}':
+                depth -= 1
+                if depth == 0:
+                    return s[start:i+1]
+        return s  # Return as-is if unbalanced
 
     def _build_result_from_json(self, data: dict) -> DeliberationResult:
         """Build result from parsed JSON."""
-        # Parse divergences
-        divergences = []
-        for div in data.get("divergences", []):
-            positions = [
-                Position(
-                    view=p.get("view", ""),
-                    confidence=Confidence(p.get("confidence", "medium")),
-                )
-                for p in div.get("positions", [])
-            ]
-            divergences.append(Divergence(
-                topic=div.get("topic", ""),
-                description=div.get("description", ""),
-                positions=positions,
-            ))
-
         return DeliberationResult(
-            verdict=data.get("verdict", "No verdict provided"),
+            answer=data.get("answer", "No answer provided"),
             confidence=Confidence(data.get("confidence", "medium")),
-            reasoning=data.get("reasoning", ""),
-            key_agreements=data.get("key_agreements", []),
-            divergences=divergences,
+            support=data.get("support", []),
+            concerns=data.get("concerns", []),
+            conviction=data.get("conviction", ""),
+            open_questions=data.get("open_questions", []),
         )
 
     def _build_fallback_result(self, content: str) -> DeliberationResult:
         """Build result from unstructured text."""
-        # Simple extraction - first paragraph as verdict
+        # Simple extraction - first paragraph as answer
         paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
-        verdict = paragraphs[0] if paragraphs else "Analysis complete - see full content"
+        answer = paragraphs[0] if paragraphs else "Analysis complete - see full content"
 
         return DeliberationResult(
-            verdict=verdict[:500],  # Limit length
+            answer=answer[:500],
             confidence=Confidence.MEDIUM,
-            reasoning="See full synthesis for details.",
-            key_agreements=[],
-            divergences=[],
+            support=[],
+            concerns=[],
+            conviction="",
+            open_questions=[],
         )
