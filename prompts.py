@@ -63,7 +63,7 @@ def build_r2_prompt(
     for label, output in other_outputs:
         others_section += f"\n**{label}:**\n---\n{output}\n---\n"
 
-    return f"""Original thesis:
+    return f"""Original query:
 ---
 {thesis}
 ---
@@ -76,12 +76,12 @@ Your R1 analysis:
 Other agents' analyses:
 {others_section}
 
-Review the other analyses and identify:
-1. **Points of agreement** - Where do all analyses converge?
-2. **Points of disagreement** - Where do analyses diverge? Why?
-3. **New considerations** - What did others raise that you find compelling?
-4. **Rebuttals** - What do you disagree with and why?
+Your task:
+1. Identify the single strongest point made by another agent that challenges your R1 view - quote it directly and respond
+2. Identify one significant consideration you missed - explain why it matters
+3. State one point where you have higher conviction than the other agents - defend it with specific reasoning
 
+Be substantive. Vague agreement or disagreement is not useful.
 {MARKDOWN_INSTRUCTION}"""
 
 
