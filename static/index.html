@@ -124,25 +124,32 @@
       status.style.display = 'none';
       result.style.display = 'block';
 
-      let html = `<div class="verdict">${r.verdict}</div>`;
+      let html = `<div class="verdict">${r.answer}</div>`;
       html += `<div><strong>Confidence:</strong> ${r.confidence}</div>`;
-      html += `<div class="section"><div class="section-title">Reasoning</div>${r.reasoning}</div>`;
 
-      html += `<div class="section"><div class="section-title">Key Agreements</div>`;
-      r.key_agreements.forEach(a => {
-        html += `<div class="agreement">${a}</div>`;
+      if (r.conviction) {
+        html += `<div class="section"><div class="section-title">Strongest Conviction</div>${r.conviction}</div>`;
+      }
+
+      html += `<div class="section"><div class="section-title">Support</div>`;
+      r.support.forEach(s => {
+        html += `<div class="agreement">${s}</div>`;
       });
       html += `</div>`;
 
-      html += `<div class="section"><div class="section-title">Divergences</div>`;
-      r.divergences.forEach(d => {
-        html += `<div class="divergence"><div class="divergence-title">${d.topic}</div><div>${d.description}</div>`;
-        d.positions.forEach(p => {
-          html += `<div class="position">• ${p.view} <em>(${p.confidence})</em></div>`;
+      html += `<div class="section"><div class="section-title">Concerns</div>`;
+      r.concerns.forEach(c => {
+        html += `<div class="divergence">${c}</div>`;
+      });
+      html += `</div>`;
+
+      if (r.open_questions && r.open_questions.length > 0) {
+        html += `<div class="section"><div class="section-title">Open Questions</div>`;
+        r.open_questions.forEach(q => {
+          html += `<div class="position">• ${q}</div>`;
         });
         html += `</div>`;
-      });
-      html += `</div>`;
+      }
 
       html += `<div style="margin-top:16px;font-size:0.85rem;color:#888;">Tokens: ${r.tokens_used} | Rounds: ${r.rounds_completed}</div>`;
 

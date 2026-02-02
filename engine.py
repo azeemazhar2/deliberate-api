@@ -8,7 +8,7 @@ from typing import Callable, Awaitable
 
 from models import (
     Job, JobStatus, DeliberationResult, AgentOutput, RoundOutput,
-    Divergence, Position, Confidence,
+    Confidence,
 )
 from openrouter import get_client, OpenRouterError
 from prompts import build_r1_prompt, build_r2_prompt, build_r3_prompt, AGENT_LABELS
@@ -206,40 +206,26 @@ class DeliberationEngine:
 
     def _build_result_from_json(self, data: dict) -> DeliberationResult:
         """Build result from parsed JSON."""
-        # Parse divergences
-        divergences = []
-        for div in data.get("divergences", []):
-            positions = [
-                Position(
-                    view=p.get("view", ""),
-                    confidence=Confidence(p.get("confidence", "medium")),
-                )
-                for p in div.get("positions", [])
-            ]
-            divergences.append(Divergence(
-                topic=div.get("topic", ""),
-                description=div.get("description", ""),
-                positions=positions,
-            ))
-
         return DeliberationResult(
-            verdict=data.get("verdict", "No verdict provided"),
+            answer=data.get("answer", "No answer provided"),
             confidence=Confidence(data.get("confidence", "medium")),
-            reasoning=data.get("reasoning", ""),
-            key_agreements=data.get("key_agreements", []),
-            divergences=divergences,
+            support=data.get("support", []),
+            concerns=data.get("concerns", []),
+            conviction=data.get("conviction", ""),
+            open_questions=data.get("open_questions", []),
         )
 
     def _build_fallback_result(self, content: str) -> DeliberationResult:
         """Build result from unstructured text."""
-        # Simple extraction - first paragraph as verdict
+        # Simple extraction - first paragraph as answer
         paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
-        verdict = paragraphs[0] if paragraphs else "Analysis complete - see full content"
+        answer = paragraphs[0] if paragraphs else "Analysis complete - see full content"
 
         return DeliberationResult(
-            verdict=verdict[:500],  # Limit length
+            answer=answer[:500],
             confidence=Confidence.MEDIUM,
-            reasoning="See full synthesis for details.",
-            key_agreements=[],
-            divergences=[],
+            support=[],
+            concerns=[],
+            conviction="",
+            open_questions=[],
         )

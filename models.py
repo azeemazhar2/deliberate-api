@@ -54,39 +54,32 @@ class Confidence(str, Enum):
     LOW = "low"
 
 
-class Position(BaseModel):
-    """A single agent's position on a divergent topic."""
-
-    view: str
-    confidence: Confidence
-
-
-class Divergence(BaseModel):
-    """A topic where agents disagreed."""
-
-    topic: str
-    description: str
-    positions: list[Position]
-
-
 class DeliberationResult(BaseModel):
     """The structured output of a deliberation."""
 
-    # Core verdict
-    verdict: str = Field(..., description="The synthesized conclusion")
+    # Core answer
+    answer: str = Field(..., description="Direct response to the query")
     confidence: Confidence = Field(..., description="Overall confidence level")
-    reasoning: str = Field(..., description="Key reasoning behind the verdict")
 
-    # Agreements
-    key_agreements: list[str] = Field(
+    # Supporting points
+    support: list[str] = Field(
         default_factory=list,
-        description="Points all agents agreed on"
+        description="Key points supporting the answer"
     )
 
-    # Divergences
-    divergences: list[Divergence] = Field(
+    # Concerns/risks
+    concerns: list[str] = Field(
         default_factory=list,
-        description="Topics where agents had different views"
+        description="Key risks or limitations"
+    )
+
+    # Strongest agreement
+    conviction: str = Field("", description="What agents most strongly agreed on")
+
+    # Open questions
+    open_questions: list[str] = Field(
+        default_factory=list,
+        description="Unresolved issues that matter most"
     )
 
     # Metadata
